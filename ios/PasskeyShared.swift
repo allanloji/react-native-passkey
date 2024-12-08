@@ -350,12 +350,47 @@ internal struct AuthenticationExtensionsLargeBlobInputs: Decodable {
   }
 }
 
+internal struct AuthenticationExtensionsPRFInputs: Decodable {
+        struct Eval: Decodable {
+            var first: Data
+
+            enum CodingKeys: String, CodingKey {
+                case first
+            }
+
+            init(from decoder: any Decoder) throws {
+                let values = try decoder.container(keyedBy: CodingKeys.self)
+                
+                // RN converts UInt8Array to Dictionary; decode it
+                let firstDict = try values.decodeIfPresent([String: Int].self, forKey: .first)
+                if let dict = firstDict {
+                    let sortedValues = dict.sorted(by: { $0.key < $1.key }).map { UInt8($0.value) }
+                    first = Data(sortedValues)
+                } else {
+                    throw DecodingError.dataCorruptedError(forKey: .first, in: values, debugDescription: "Failed to decode 'first'")
+                }
+            }
+        }
+        
+        var eval: Eval
+
+        enum CodingKeys: String, CodingKey {
+            case eval
+        }
+
+        init(from decoder: any Decoder) throws {
+            let values = try decoder.container(keyedBy: CodingKeys.self)
+            eval = try values.decode(Eval.self, forKey: .eval)
+        }
+    }
+
 
 /**
     Specification reference: https://w3c.github.io/webauthn/#dictdef-authenticationextensionsclientinputs
 */
 internal struct AuthenticationExtensionsClientInputs: Decodable {
   var largeBlob: AuthenticationExtensionsLargeBlobInputs?
+  var prf: AuthenticationExtensionsPRFInputs?
 }
 
 // ! There is only one webauthn extension currently supported on iOS as of iOS 17.0:
@@ -368,7 +403,7 @@ internal struct AuthenticationExtensionsClientOutputs {
    */
   internal struct AuthenticationExtensionsLargeBlobOutputs {
     // - true if, and only if, the created credential supports storing large blobs. Only present in registration outputs.
-    let supported: Bool?;
+    let supported: Bool?
     
     // - The opaque byte string that was associated with the credential identified by rawId. Only valid if read was true.
     let blob: Data?
@@ -377,5 +412,15 @@ internal struct AuthenticationExtensionsClientOutputs {
     let  written: Bool?;
   }
   
+  internal struct AuthenticationExtensionsPrfOutputs {
+    internal struct AuthenticationExtensionsPRFValues {
+      let first: Data
+      let second: Data?
+    }
+    let eval: AuthenticationExtensionsPRFValues?
+  }
+  
+  
   let largeBlob: AuthenticationExtensionsLargeBlobOutputs?
+  let prf: AuthenticationExtensionsPrfOutputs?
 }

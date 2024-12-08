@@ -44,6 +44,7 @@ class Passkey: NSObject, RNPasskeyResultHandler {
       // Create requests
       let platformKeyRequest: ASAuthorizationRequest = self.configureCreatePlatformRequest(challenge: challenge, userId: userId, request: requestJSON);
       let securityKeyRequest: ASAuthorizationRequest = self.configureCreateSecurityKeyRequest(challenge: challenge, userId: userId, request: requestJSON);
+      print(platformKeyRequest)
         
       // Get authorization controller
       let authController: ASAuthorizationController = self.configureAuthController(forcePlatformKey: forcePlatformKey, forceSecurityKey: forceSecurityKey, platformKeyRequest: platformKeyRequest, securityKeyRequest: securityKeyRequest);
@@ -181,9 +182,19 @@ class Passkey: NSObject, RNPasskeyResultHandler {
       }
     }
     
+    if #available(iOS 18.0, *) {
+      if let prf = request.extensions?.prf {
+        let prfInput = ASAuthorizationPublicKeyCredentialPRFRegistrationInput.self.InputValues(saltInput1: prf.eval.first)
+        let prfObj = ASAuthorizationPublicKeyCredentialPRFRegistrationInput.inputValues(prfInput)
+        authRequest.prf = prfObj
+        print("entra prf")
+      }
+    }
+    
     if let userVerificationPref = request.authenticatorSelection?.userVerification {
       authRequest.userVerificationPreference = userVerificationPref.appleise()
     }
+    
 
     return authRequest;
   }
@@ -199,6 +210,19 @@ class Passkey: NSObject, RNPasskeyResultHandler {
     if #available(iOS 17.0, *) {
       if request.extensions?.largeBlob?.read == true {
         authRequest.largeBlob = ASAuthorizationPublicKeyCredentialLargeBlobAssertionInput.read;
+      }
+      
+      if let largeBlobWriteData = request.extensions?.largeBlob?.write {
+        authRequest.largeBlob = ASAuthorizationPublicKeyCredentialLargeBlobAssertionInput.write(largeBlobWriteData)
+      }
+    }
+    
+    
+    if #available(iOS 18.0, *) {
+      if let prf = request.extensions?.prf {
+        let prfInput = ASAuthorizationPublicKeyCredentialPRFAssertionInput.self.InputValues(saltInput1: prf.eval.first)
+        let prfObj = ASAuthorizationPublicKeyCredentialPRFAssertionInput.inputValues(prfInput)
+        authRequest.prf = prfObj
       }
       
       if let largeBlobWriteData = request.extensions?.largeBlob?.write {
@@ -280,4 +304,3 @@ class Passkey: NSObject, RNPasskeyResultHandler {
     handler.reject(error.type.rawValue, error.message, nil);
   }
 }
-

@@ -89,6 +89,7 @@ internal struct AuthenticatorAssertionResponseJSON: Encodable {
 */
 internal struct  AuthenticationExtensionsClientOutputsJSON: Encodable {
   var largeBlob: AuthenticationExtensionsLargeBlobOutputsJSON?
+  var prf: AuthenticationExtensionsPrfOutputsJSON?
 }
 
 /**
@@ -103,4 +104,15 @@ internal struct AuthenticationExtensionsLargeBlobOutputsJSON: Encodable {
   var blob: [UInt]?;
   
   var written: Bool?;
+}
+
+internal struct AuthenticationExtensionsPrfOutputsJSON: Encodable {
+  var enabled: Bool?;
+  
+  var results: AuthenticationExtensionsPRFValue;
+}
+
+internal struct AuthenticationExtensionsPRFValue: Encodable {
+  var first: [UInt];
+  var second: [UInt]?;
 }

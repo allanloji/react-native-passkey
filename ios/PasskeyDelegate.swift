@@ -72,8 +72,26 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
         );
       }
     }
+    
+    var prf: AuthenticationExtensionsPrfOutputsJSON?;
+    if #available(iOS 18.0, *) {
+        if let prfOutput = credential.prf { // Safely unwrap `credential.prf`
+            if let first = prfOutput.first { // Safely unwrap `first`
+              
+                let keyBytes: [UInt8] = first.withUnsafeBytes { Array($0) }
+                let uintArray: [UInt] = keyBytes.map { UInt($0) }
+                
+                // Create the PRF results
+                var prfResults = AuthenticationExtensionsPRFValue(first: uintArray);
+               
+                
+                // Assign to the `prf` variable
+                prf = AuthenticationExtensionsPrfOutputsJSON(results: prfResults)
+            }
+        }
+    }
       
-    let clientExtensionResults = (largeBlob != nil) ? AuthenticationExtensionsClientOutputsJSON(largeBlob: largeBlob) : nil;
+    let clientExtensionResults = (largeBlob != nil || prf != nil) ? AuthenticationExtensionsClientOutputsJSON(largeBlob: largeBlob, prf: prf) : nil;
     
     let response =  AuthenticatorAttestationResponseJSON(
       clientDataJSON: credential.rawClientDataJSON.toBase64URLEncodedString(),
@@ -136,7 +154,23 @@ class PasskeyDelegate: NSObject, ASAuthorizationControllerDelegate, ASAuthorizat
         }
     }
     
-    let clientExtensionResults = AuthenticationExtensionsClientOutputsJSON(largeBlob: largeBlob);
+    var prf: AuthenticationExtensionsPrfOutputsJSON?;
+    if #available(iOS 18.0, *), let result = credential.prf {
+      let first = result.first
+              
+                let keyBytes: [UInt8] = first.withUnsafeBytes { Array($0) }
+                let uintArray: [UInt] = keyBytes.map { UInt($0) }
+                
+                // Create the PRF results
+                var prfResults = AuthenticationExtensionsPRFValue(first: uintArray);
+               
+                
+                // Assign to the `prf` variable
+                prf = AuthenticationExtensionsPrfOutputsJSON(results: prfResults)
+        }
+    
+    
+    let clientExtensionResults = AuthenticationExtensionsClientOutputsJSON(largeBlob: largeBlob, prf: prf);
     let userHandle: String? = credential.userID.flatMap { String(data: $0, encoding: .utf8) };
 
     let response = AuthenticatorAssertionResponseJSON(
